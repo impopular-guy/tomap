@@ -67,7 +67,8 @@ fn struct_to_map[T](data T) !map[string]Any {
 				} $else $if field.typ is ?string {
 					res[field.name] = Any(data.$(field.name))
 				} $else $if field.is_struct {
-					res[field.name] = struct_to_map(data.$(field.name))!
+					x := data.$(field.name) ?
+					res[field.name] = struct_to_map(x)!
 				} $else $if field.is_array {
 					res[field.name] = array_to_map(data.$(field.name))!
 					// } $else $if field is $Map {
@@ -115,9 +116,11 @@ fn struct_to_map[T](data T) !map[string]Any {
 	return res
 }
 
-[markused]
 fn array_to_map[T](arr T) ![]Any {
 	mut res := []Any{}
+	if arr.len == 0 {
+		return res
+	}
 	$if T is []bool {
 		for x in arr {
 			res << Any(x)
@@ -171,7 +174,14 @@ fn array_to_map[T](arr T) ![]Any {
 			res << Any(x)
 		}
 	} $else {
-		return error('array: Failed to encode `${typeof(arr).name}`. Please create an issue.')
+		x := arr[0]
+		$if x is $Struct {
+			for a in arr {
+				res << struct_to_map(a)!
+			}
+		} $else {
+			return error('array: Failed to encode `${typeof(arr).name}`. Please create an issue.')
+		}
 	}
 	return res
 }
